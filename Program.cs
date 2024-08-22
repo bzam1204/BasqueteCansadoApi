@@ -13,4 +13,6 @@ app.UseSwaggerUI();
 app.MapPlayerRoutes();
 app.MapMatchRoutes();
 app.MapPlayerTeamMatchRoutes();
+app.MapStatisticRoutes();
+app.MapStatisticCategoryRoutes();
 app.Run();
