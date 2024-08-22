@@ -23,6 +23,12 @@ namespace BasqueteCansadoApi.Routes
                 return match is null ? Results.NotFound() : Results.Ok(match);
 
             });
+            //get all players in a match
+            endpoints.MapGet("/matches/{id}/players", async (AppDbContext context, Guid id) =>
+            {
+                var players = await context.PlayerTeamMatches.Where(playerTeamMatch => playerTeamMatch.MatchId == id).ToListAsync();
+                return Results.Ok(players);
+            });
 
             endpoints.MapPost("/matches", async (AppDbContext context) =>
             {
