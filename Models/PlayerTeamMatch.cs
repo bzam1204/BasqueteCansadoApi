@@ -7,7 +7,7 @@
         public bool Team { get; set; }
         public Guid PlayerId { get; set; }
         public Guid MatchId { get; set; }
-        public Player Player { get; set; }
-        public Match Match { get; set; }
+        public Player? Player { get; set; }
+        public Match? Match { get; set; }
     }
 }
