@@ -51,22 +51,6 @@ app.MapPost("/api/socket/{id:int}", (int id, SocketController socketController) 
 // Configurar o hub de notificações
 app.MapHub<NotificationHub>("/hubs/notifications");
 
-// app.UseWebSockets();
-
-// app.Map("/ws", async context =>
-// {
-//     if (!context.WebSockets.IsWebSocketRequest)
-//     {
-//         context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-//         return;
-//     }
-//
-//     var socketRoutes = context.RequestServices.GetRequiredService<SocketRoutes>();
-//     using var webSocket = await context.WebSockets.AcceptWebSocketAsync();
-//     await socketRoutes.HandleWebSocketAsync(webSocket);
-// });
-
-
 app.MapPlayerRoutes();
 app.MapMatchRoutes();
 app.MapPlayerTeamMatchRoutes();
