@@ -1,144 +1,166 @@
-﻿public class SocketController
+﻿using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.SignalR;
+
+namespace BasqueteCansadoApi.Controllers
 {
-    private System.Timers.Timer _interval;
-    private bool _running = false;
-    private int _currentTime = 10 * 60; // 10 minutos
-    private int _possessionTime = 24;
-    private readonly Dictionary<string, Action> _commandHandlers;
-
-    public SocketController()
+    public class SocketController
     {
-        _commandHandlers = new Dictionary<string, Action>
-        {
-            { "RemoveMinute", RemoveMinute },
-            { "AddMinute", AddMinute },
-            { "SetUpTimer", SetUpTimer },
-            { "ResetPossessionTime", ResetPossessionTime },
-            { "Apitar", Apitar },
-            { "PlayPauseTimer", PlayPauseTimer }
-        };
-    }
+        private Timer _interval;
+        private bool _running = false;
+        private int _currentTime = 10 * 60; // 10 minutos
+        private int _possessionTime = 24;
+        private readonly IHubContext<NotificationHub> _hubContext;
 
-    public void HandleServiceCall(string command)
-    {
-        if (_commandHandlers.TryGetValue(command, out var handler))
+        public SocketController(IHubContext<NotificationHub> hubContext)
         {
-            handler();
+            _hubContext = hubContext;
         }
-        else
+
+        public void SetUpTimer()
         {
-            Console.WriteLine("Comando não reconhecido");
-        }
-    }
-
-    public void SetUpTimer()
-    {
-        _running = false;
-        _currentTime = 10 * 60; // 10 minutos
-        _possessionTime = 24;
-
-        EmitUpdatedInfo();
-
-        _interval?.Stop();
-    }
-
-    public void AddMinute()
-    {
-        _currentTime += 60;
-        EmitUpdatedInfo();
-    }
-
-    public void RemoveMinute()
-    {
-        if (_currentTime >= 60)
-        {
-            _currentTime -= 60;
-            EmitUpdatedInfo();
-        }
-        else
-        {
-            Console.WriteLine("Não foi possível concluir a operação, pois o tempo restante é menor do que um minuto");
-        }
-    }
-
-    public void PlayPauseTimer()
-    {
-        if (!_running && _currentTime != 0)
-        {
-            _running = true;
-            _interval = new System.Timers.Timer(1000);
-            _interval.Elapsed += (sender, e) =>
-            {
-                _currentTime--;
-                _possessionTime--;
-
-                if (_currentTime == 0 || _possessionTime == 0)
-                {
-                    PlayPauseTimer();
-                    _possessionTime = 24;
-                }
-                EmitUpdatedInfo();
-            };
-            _interval.Start();
-        }
-        else
-        {
-            _interval?.Stop();
             _running = false;
-            EmitUpdatedInfo();
-        }
-    }
-
-    public void ResetPossessionTime()
-    {
-        if (_running && _currentTime > 24)
-        {
+            _currentTime = 10 * 60;
             _possessionTime = 24;
+
+            EmitUpdatedInfo();
+
+            _interval?.Dispose();
+        }
+
+        public void AddMinute()
+        {
+            _currentTime += 60;
             EmitUpdatedInfo();
         }
-        else if (_running && _currentTime < 24)
+
+        public void RemoveMinute()
         {
-            _possessionTime = _currentTime;
-            EmitUpdatedInfo();
+            if (_currentTime >= 60)
+            {
+                _currentTime -= 60;
+                EmitUpdatedInfo();
+            }
+            else
+            {
+                _hubContext.Clients.All.SendAsync("alert",
+                    new
+                    {
+                        type = "error",
+                        message = "Não foi possível concluir a operação, pois o tempo restante é menor do que um minuto"
+                    });
+            }
+        }
+
+        public void PlayPauseTimer()
+        {
+            if (!_running && _currentTime != 0)
+            {
+                _running = true;
+                _interval = new Timer(_ =>
+                {
+                    _currentTime--;
+                    _possessionTime--;
+
+                    if (_currentTime == 0 || _possessionTime == 0)
+                    {
+                        PlayPauseTimer();
+                        _possessionTime = 24;
+                    }
+
+                    EmitUpdatedInfo();
+                }, null, 0, 1000);
+            }
+            else
+            {
+                _interval?.Dispose();
+                _running = false;
+                EmitUpdatedInfo();
+            }
+        }
+
+        public void ResetPossessionTime()
+        {
+            if (_running && _currentTime > 24)
+            {
+                _possessionTime = 24;
+                EmitUpdatedInfo();
+            }
+            else if (_running && _currentTime < 24)
+            {
+                _possessionTime = _currentTime;
+                EmitUpdatedInfo();
+            }
+        }
+
+        private void EmitUpdatedInfo()
+        {
+            _hubContext.Clients.All.SendAsync("update",
+                new { currentTime = _currentTime, possessionTime = _possessionTime, isRunning = _running });
+        }
+
+        public void Apitar()
+        {
+            _hubContext.Clients.All.SendAsync("apito");
+        }
+
+        public async Task EmitMatchScoreboard(int partidaId)
+        {
+            try
+            {
+                // Simulate async operation
+                var pontuacao = await Task.Run(() => EstatisticaController.CalculaPontuacaoPartida(partidaId));
+                await _hubContext.Clients.All.SendAsync("pontuacao", new { pontuacao });
+                Console.WriteLine("Emitindo pontuação");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Ocorreu um erro ao emitir pontuação: " + ex.Message);
+            }
+        }
+
+        public void HandleServiceCall(int id)
+        {
+            switch (id)
+            {
+                case 11:
+                    RemoveMinute();
+                    break;
+                case 13:
+                    AddMinute();
+                    break;
+                case 14:
+                    SetUpTimer();
+                    break;
+                case 15:
+                    ResetPossessionTime();
+                    break;
+                case 16:
+                    Apitar();
+                    break;
+                case 17:
+                    PlayPauseTimer();
+                    break;
+                default:
+                    Console.WriteLine("Evento não reconhecido");
+                    break;
+            }
+        }
+
+        public void Disconnect()
+        {
+            Console.WriteLine("Um usuário se desconectou...");
         }
     }
 
-    public void EmitUpdatedInfo()
+    public static class EstatisticaController
     {
-        Console.WriteLine($"Update: CurrentTime={_currentTime}, PossessionTime={_possessionTime}, IsRunning={_running}");
-    }
-
-    public void Apitar()
-    {
-        Console.WriteLine("Apito");
-    }
-
-    public async Task EmitMatchScoreboard(int partidaId)
-    {
-        try
+        public static int CalculaPontuacaoPartida(int partidaId)
         {
-            // Simulate async operation
-            var pontuacao = await Task.Run(() => EstatisticaController.CalculaPontuacaoPartida(partidaId));
-            Console.WriteLine($"Emitindo pontuação: {pontuacao}");
+            // Implementação fictícia
+            return 42;
         }
-        catch (Exception ex)
-        {
-            Console.WriteLine("Ocorreu um erro ao emitir pontuação: " + ex.Message);
-        }
-    }
-
-    public void Disconnect()
-    {
-        Console.WriteLine("Um usuário se desconectou...");
-    }
-}
-
-// Supondo que EstatisticaController está definido em outro lugar
-public static class EstatisticaController
-{
-    public static int CalculaPontuacaoPartida(int partidaId)
-    {
-        // Implementação fictícia
-        return 42;
     }
 }
