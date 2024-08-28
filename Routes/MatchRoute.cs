@@ -8,21 +8,20 @@ namespace BasqueteCansadoApi.Routes
     {
         public static void MapMatchRoutes(this IEndpointRouteBuilder endpoints)
         {
+            //get all matches
             endpoints.MapGet("/matches", async (AppDbContext context) =>
             {
-
                 var matches = await context.Matches.ToListAsync();
                 return Results.Ok(matches);
-
             });
 
+            //get match by id
             endpoints.MapGet("/matches/{id}", async (AppDbContext context, Guid id) =>
             {
-
                 var match = await context.Matches.FindAsync(id);
                 return match is null ? Results.NotFound() : Results.Ok(match);
-
             });
+
             //get all players in a match
             endpoints.MapGet("/matches/{id}/players", async (AppDbContext context, Guid id) =>
             {
@@ -30,6 +29,7 @@ namespace BasqueteCansadoApi.Routes
                 return Results.Ok(players);
             });
 
+            //create new match
             endpoints.MapPost("/matches", async (AppDbContext context) =>
             {
 
@@ -52,15 +52,21 @@ namespace BasqueteCansadoApi.Routes
 
             //});
 
+            //delete match by id
             endpoints.MapDelete("/matches/{id}", async (AppDbContext context, Guid id) =>
             {
-
-                var match = await context.Matches.FindAsync(id);
-                if (match is null) return Results.NotFound();
-                context.Matches.Remove(match);
-                await context.SaveChangesAsync();
-                return Results.NoContent();
-
+                try
+                {
+                    var match = await context.Matches.FindAsync(id);
+                    if (match is null) return Results.NotFound();
+                    context.Matches.Remove(match);
+                    await context.SaveChangesAsync();
+                    return Results.Ok($"Match {match.Id} deleted successfully.");
+                }
+                catch (Exception ex)
+                {
+                    return Results.BadRequest(ex.Message);
+                }
             });
         }
     }

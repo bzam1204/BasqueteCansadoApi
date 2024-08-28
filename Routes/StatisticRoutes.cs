@@ -22,13 +22,13 @@ namespace BasqueteCansadoApi.Routes
                 var matchStatistics = await context.Statistics.Where(statictic => statictic.MatchId == matchId).ToListAsync();
                 return Results.Ok(matchStatistics);
             });
-            //get player's statistics
-            endpoints.MapGet("players/{playerId}/statistics", async (AppDbContext context, Guid playerId) =>
-            {
-                var playerStatistics = await context.Statistics.Where(statistic => statistic.PlayerId == playerId).ToListAsync();
-                return Results.Ok(playerStatistics);
-
-            });
+            // //get player's statistics
+            // endpoints.MapGet("players/{playerId}/statistics", async (AppDbContext context, Guid playerId) =>
+            // {
+            //     var playerStatistics = await context.Statistics.Where(statistic => statistic.PlayerId == playerId).ToListAsync();
+            //     return Results.Ok(playerStatistics);
+            //
+            // });
             //get player's statistics in a match
             endpoints.MapGet("/match/{matchId}/statistics/player/{playerId}", async (AppDbContext context, Guid matchId, Guid playerId) =>
             {
