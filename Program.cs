@@ -9,10 +9,10 @@ builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.WithOrigins("http://localhost:5500", "http://127.0.0.1:5500", "http://localhost:3000", "http://localhost:3001")
+        policy.WithOrigins("*")
             .AllowAnyMethod()
-            .AllowAnyHeader()
-            .AllowCredentials(); // Use isso se precisar enviar cookies ou autenticação
+            .AllowAnyHeader();
+            
     });
 });
 builder.Services.AddEndpointsApiExplorer();
