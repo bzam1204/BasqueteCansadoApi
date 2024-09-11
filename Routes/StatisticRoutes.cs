@@ -17,7 +17,7 @@ namespace BasqueteCansadoApi.Routes
                 return Results.Ok(statistics);
             });
             //get match's statistics
-            endpoints.MapGet("/match/{matchId}/statistics ", async (AppDbContext context, Guid matchId) =>
+            endpoints.MapGet("/match/{matchId}/statistics", async (AppDbContext context, Guid matchId) =>
             {
                 var matchStatistics = await context.Statistics.Where(statictic => statictic.MatchId == matchId).ToListAsync();
                 return Results.Ok(matchStatistics);
@@ -57,7 +57,7 @@ namespace BasqueteCansadoApi.Routes
                     Id = Guid.NewGuid(),
                     CategoryId = categoryId,
                     Team = team,
-                    CreatedAt = DateTime.Now,
+                    CreatedAt = DateTime.UtcNow,
                     MatchId = matchId,
                     PlayerId = playerId,
                 };

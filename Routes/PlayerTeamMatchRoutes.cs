@@ -15,7 +15,13 @@ namespace BasqueteCansadoApi.Routes
                 {
                     var player = await context.Players.FindAsync(playerId);
                     var match = await context.Matches.FindAsync(matchId);
+                    var playerTeamMatch = await context.PlayerTeamMatches
+                        .SingleOrDefaultAsync(ptm =>
+                            ptm.PlayerId == playerId &&
+                            ptm.MatchId == matchId &&
+                            ptm.Team == team);
 
+                    if (playerTeamMatch != null) return Results.NotFound();
                     if (player is null || match is null) return Results.NotFound();
 
                     var newPlayerTeamMatch = new PlayerTeamMatch
@@ -81,16 +87,10 @@ namespace BasqueteCansadoApi.Routes
                         .Where(ptm => ptm.MatchId == id && ptm.Team == team)
                         .Select(ptm => new
                         {
-                            ptm.PlayerId,
+                            ptm.Player
                             // Adicione aqui outros campos do jogador que você deseja retornar
                         })
                         .ToListAsync();
-
-                    // Verifica se a lista de jogadores está vazia
-                    if (!players.Any())
-                    {
-                        return Results.NotFound("Nenhum jogador encontrado para esta partida e time.");
-                    }
 
                     return Results.Ok(players);
                 }
@@ -101,6 +101,69 @@ namespace BasqueteCansadoApi.Routes
                     return Results.Problem("Ocorreu um erro ao processar sua solicitação.", statusCode: 500);
                 }
             });
+
+            //substitute player in a match
+            endpoints.MapPut("match/{matchId}/substitute",
+                async (AppDbContext context, Guid matchId, Guid? playerOneId, Guid? playerTwoId) =>
+                {
+                    if (playerOneId is null && playerTwoId is null) return Results.BadRequest("Jogadores não informados");
+                    try
+                    {
+                        var ptms = await context.PlayerTeamMatches
+                            .Where(ptm =>
+                                ptm.MatchId == matchId && ptm.PlayerId == playerOneId || ptm.PlayerId == playerTwoId)
+                            .ToArrayAsync();
+
+
+                        if (ptms.Length == 0) return Results.NotFound();
+                        if (ptms.Length == 2)
+                        {
+                            var playerOne = ptms[0];
+                            var playerTwo = ptms[1];
+
+                            playerOne.Team = !playerOne.Team;
+                            playerTwo.Team = !playerTwo.Team;
+
+                            context.PlayerTeamMatches.UpdateRange(playerOne, playerTwo);
+                            await context.SaveChangesAsync();
+                        }
+
+                        if (ptms.Length == 1)
+                        {
+                            var playerOnGame = ptms[0];
+                            Player playerOffGame;
+
+                            if (playerOnGame.PlayerId == playerOneId)
+                                playerOffGame = await context.Players.FindAsync(playerTwoId);
+                            else
+                                playerOffGame = await context.Players.FindAsync(playerOneId);
+
+                            playerOnGame.IsStarter = false;
+
+                            var newPlayerTeamMatch = new PlayerTeamMatch
+                            {
+                                Id = Guid.NewGuid(),
+                                MatchId = matchId,
+                                Team = playerOnGame.Team,
+                                Match = playerOnGame.Match,
+                                IsStarter = true,
+                                PlayerId = playerOffGame.Id,
+                                Player = playerOffGame
+                            };
+
+                            context.PlayerTeamMatches.Add(newPlayerTeamMatch);
+                            context.PlayerTeamMatches.Update(playerOnGame);
+                            await context.SaveChangesAsync();
+                        }
+
+                        return Results.Ok("Substituição realizada com sucesso");
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                        throw;
+                    }
+                });
         }
     }
 }

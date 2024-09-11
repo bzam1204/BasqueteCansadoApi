@@ -13,7 +13,7 @@ namespace BasqueteCansadoApi.Data
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            optionsBuilder.UseNpgsql("Server=localhost;Database=basquete-cansado;Port=5432;User Id=postgres;Password=422171;");
+            optionsBuilder.UseNpgsql("Server=basquetecansado-pg.postgres.database.azure.com;Database=postgres;Port=5432;User Id=postgres;Password=1204B,gl;Ssl Mode=Require;;");
         }
     }
 }

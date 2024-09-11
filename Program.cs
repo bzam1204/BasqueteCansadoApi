@@ -9,10 +9,12 @@ builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.WithOrigins("*")
-            .AllowAnyMethod()
-            .AllowAnyHeader();
-            
+        policy.WithOrigins("http://localhost:5500", "http://127.0.0.1:5500", "http://localhost:3000", "http://localhost:3001")
+        .AllowAnyMethod()
+            .AllowAnyHeader()
+            .AllowCredentials(); 
+
+
     });
 });
 builder.Services.AddEndpointsApiExplorer();
